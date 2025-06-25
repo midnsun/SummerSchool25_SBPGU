@@ -10,7 +10,8 @@
 #include <string>
 #include <cstdlib>
 
-const int setwConst = 6;
+const int setwConst = 10;
+bool coutFlag = true;
 
 void simpleGEMM(int m, int n, int k, double* A, double* B, double* C, double alpha, double beta) { // colomn-major
 	int i, j, p;
@@ -35,7 +36,17 @@ void simplerGEMM(int m, int n, int k, double* A, double* B, double* C) { // colo
     }
 }
 
+void determinedGenerate(int m, int n, double* M) {
+    for (size_t i = 0; i < m; ++i) {
+        for (size_t j = 0; j < n; ++j) {
+            M[j * m + i] = j * m + i;
+        }
+    }
+}
+
 void simpleGenerate(int m, int n, double* M) {
+    determinedGenerate(m, n, M);
+    return;
     std::random_device r;
     std::default_random_engine e(r());
     std::uniform_real_distribution<double> coef_gen(-1.0, 1.0);
@@ -173,7 +184,15 @@ void MPIGemm(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int period
 
     // Cannon's cycle
     for (int step = 0; step < q; ++step) {
+        if (coutFlag) std::cout << "rank is: " << rank << std::endl;
+        if (coutFlag) printAs2D(block_size, block_size, M3);
+        if (coutFlag) std::cout << std::endl;
+
         simplerGEMM(block_size, block_size, block_size, M1, M2, M3);
+
+        if (coutFlag) std::cout << "rank is: " << rank << std::endl;
+        if (coutFlag) printAs2D(block_size, block_size, M3);
+        if (coutFlag) std::cout << std::endl;
 
         MPI_Cart_shift(grid_comm, 1, -1, &right, &left);
         MPI_Sendrecv_replace(M1, block_size * block_size, MPI_DOUBLE,
@@ -190,7 +209,7 @@ void MPIGemm(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int period
 
 void testMPIGemm(int rank, int numtasks) {
     int q = sqrt(numtasks);
-    int blockSize = 1;
+    int blockSize = 2;
     int N = q * blockSize;
     int n = 3;
     int m = 4;
@@ -236,6 +255,12 @@ void testMPIGemm(int rank, int numtasks) {
             0, MPI_COMM_WORLD);
     }
 
+    if (coutFlag) std::cout << "rank: " << rank << std::endl;
+    if (coutFlag) printAs2D(blockSize, blockSize, M1);
+    if (coutFlag) std::cout << std::endl;
+    if (coutFlag) printAs2D(blockSize, blockSize, M2);
+    if (coutFlag) std::cout << std::endl;
+
     // Distribute matrices to 2D mesh ...
     start = std::chrono::steady_clock::now();
     MPIGemm(rank, numtasks, grid_comm, dims, periods, coords, blockSize, M1, M2, M3, q, RES);
@@ -249,10 +274,10 @@ void testMPIGemm(int rank, int numtasks) {
     delete[] M3;
 
     if (rank == 0) {
-        printAs2D(N, N, A);
-        std::cout << std::endl;
-        printAs2D(N, N, B);
-        std::cout << std::endl;
+        if (coutFlag) printAs2D(N, N, A);
+        if (coutFlag) std::cout << std::endl;
+        if (coutFlag) printAs2D(N, N, B);
+        if (coutFlag) std::cout << std::endl;
         C = new double[N * N] {};
 
         start = std::chrono::steady_clock::now();
@@ -260,10 +285,10 @@ void testMPIGemm(int rank, int numtasks) {
         finish = std::chrono::steady_clock::now();
         time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count();
         std::cout << std::endl << "Time for naive implementation: " << time << " , error is: " << getErr(N, N, C, RES) << std::endl;
-        printAs2D(N, N, C);
-        std::cout << std::endl;
-        printAs2D(N, N, RES);
-        std::cout << std::endl;
+        if (coutFlag) printAs2D(N, N, C);
+        if (coutFlag) std::cout << std::endl;
+        if (coutFlag) printAs2D(N, N, RES);
+        if (coutFlag) std::cout << std::endl;
     }
 
     delete[] RES;
@@ -282,7 +307,7 @@ int main(int argc, char **argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
 
-    testMPI(rank, numtasks);
+//    testMPI(rank, numtasks);
     testMPIGemm(rank, numtasks);
 
     MPI_Finalize();
