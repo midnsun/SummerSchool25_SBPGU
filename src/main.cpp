@@ -6,6 +6,9 @@
 #include <chrono>
 #include <immintrin.h>
 #include <mpi.h>
+#include <vector>
+#include <string>
+#include <cstdlib>
 
 const int setwConst = 6;
 
@@ -24,10 +27,8 @@ void simpleGEMM(int m, int n, int k, double* A, double* B, double* C, double alp
 void simplerGEMM(int m, int n, int k, double* A, double* B, double* C) { // colomn-major
     int i, j, p;
     for (j = 0; j < n; ++j) {
-//#pragma omp parallel for
         for (p = 0; p < k; ++p) {
             for (i = 0; i < m; ++i) {
-//                C[j * m + i] = C[j * m + i] + A[p * m + i] * B[j * k + p];
                 C[j * m + i] = std::fma(A[p * m + i], B[j * k + p], C[j * m + i]);
             }
         }
@@ -65,7 +66,7 @@ void printAs1D(int m, int n, double* M) {
     std::cout << std::endl;
 }
 
-void testGemm() {
+void testSimpleGemm() {
     int N = 2000;
     int n = 3;
     int m = 4;
@@ -97,20 +98,128 @@ void testGemm() {
     std::cout << "Time is: " << time << std::endl;
 }
 
-void testMPI(int* argc, char **argv) {
+void gather_result_blocks(double* block, double* RES,
+    int N, int q, int block_size, MPI_Comm grid_comm) {
+    int rank;
+    MPI_Comm_rank(grid_comm, &rank);
+
+    double* gathered = nullptr;
+    if (rank == 0) {
+        gathered = new double[N * N];
+    }
+
+    MPI_Gather(block, block_size * block_size, MPI_DOUBLE,
+        gathered, block_size * block_size, MPI_DOUBLE,
+        0, grid_comm);
+
+    if (rank == 0) {
+        for (int p = 0; p < q * q; ++p) {
+            int proc_row = p / q;
+            int proc_col = p % q;
+
+            for (int i = 0; i < block_size; ++i)
+                for (int j = 0; j < block_size; ++j) {
+                    int global_i = proc_row * block_size + i;
+                    int global_j = proc_col * block_size + j;
+                    RES[global_i * N + global_j] =
+                        gathered[p * block_size * block_size + i * block_size + j];
+                }
+        }
+    }
+
+    delete[] gathered;
+}
+
+
+void MPIGemm(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int periods[2], int coords[2], int block_size, double* M1, double* M2, double* M3, int q, double *RES) {
+    int left, right, up, down;
+    MPI_Cart_shift(grid_comm, 1, -coords[0], &right, &left);
+    MPI_Sendrecv_replace(M1, block_size * block_size, MPI_DOUBLE,
+        left, 0, right, 0, grid_comm, MPI_STATUS_IGNORE);
+
+    MPI_Cart_shift(grid_comm, 0, -coords[1], &down, &up);
+    MPI_Sendrecv_replace(M2, block_size * block_size, MPI_DOUBLE,
+        up, 0, down, 0, grid_comm, MPI_STATUS_IGNORE);
+
+    // Cannon's cycle
+    for (int step = 0; step < q; ++step) {
+        simplerGEMM(block_size, block_size, block_size, M1, M2, M3);
+
+        MPI_Cart_shift(grid_comm, 1, -1, &right, &left);
+        MPI_Sendrecv_replace(M1, block_size * block_size, MPI_DOUBLE,
+            left, 0, right, 0, grid_comm, MPI_STATUS_IGNORE);
+
+        MPI_Cart_shift(grid_comm, 0, -1, &down, &up);
+        MPI_Sendrecv_replace(M2, block_size * block_size, MPI_DOUBLE,
+            up, 0, down, 0, grid_comm, MPI_STATUS_IGNORE);
+    }
+
+    // Gather
+    gather_result_blocks(M3, RES, q * block_size, q, block_size, grid_comm);
+}
+
+void testMPIGemm(int rank, int numtasks) {
+    int q = sqrt(numtasks);
+    int blockSize = 500;
+    int N = q * blockSize;
+    int n = 3;
+    int m = 4;
+    int k = 2;
+    n = m = k = N;
+    double alpha = 1.0;
+    double beta = -1.0;
+    std::chrono::steady_clock::time_point start, finish;
+    uint64_t time;
+    double* M1, * M2, * M3, * RES = nullptr;
+
+    if (q * q != numtasks) {
+        if (rank == 0)
+            std::cerr << "Number of processes must be a perfect square\n";
+        MPI_Finalize();
+        return;
+    }
+
+    // Create 2D grid
+    MPI_Comm grid_comm;
+    int dims[2] = { q, q }, periods[2] = { 1, 1 }, coords[2];
+    MPI_Cart_create(MPI_COMM_WORLD, 2, dims, periods, 1, &grid_comm);
+    MPI_Cart_coords(grid_comm, rank, 2, coords);
+
+    M1 = new double[blockSize * blockSize] {};
+    M2 = new double[blockSize * blockSize] {};
+    M3 = new double[blockSize * blockSize] {};
+    if (rank == 0) RES = new double[N * N] {};
+
+    simpleGenerate(blockSize, blockSize, M1);
+    simpleGenerate(blockSize, blockSize, M2);
+
+    // Distribute matrices to 2D mesh ...
+
+    start = std::chrono::steady_clock::now();
+    MPIGemm(rank, numtasks, grid_comm, dims, periods, coords, blockSize, M1, M2, M3, q, RES);
+    finish = std::chrono::steady_clock::now();
+    time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count();
+
+    std::cout << "Time is: " << time << std::endl;
+    delete[] M1;
+    delete[] M2;
+    delete[] M3;
+    delete[] RES;
+}
+
+void testMPI(int rank, int numtasks) {
+    printf("Hello from process = %d, total number of processes: %d\n", rank, numtasks);
+}
+
+int main(int argc, char **argv) {
     int numtasks, rank;
-    MPI_Init(argc, &argv);
+    MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
 
-//    printf("Hello from process = %d, total number of processes: %d\n", rank, numtasks);
+    testMPI(rank, numtasks);
+    testMPIGemm(rank, numtasks);
 
     MPI_Finalize();
-}
-
-int main(int* argc, char **argv) {
-    
-    testMPI(argc, argv);
-
 	return 0;
 }
