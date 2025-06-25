@@ -184,12 +184,14 @@ void MPIGemm(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int period
 
     // Cannon's cycle
     for (int step = 0; step < q; ++step) {
+        if (coutFlag) MPI_Barrier(MPI_COMM_WORLD);
         if (coutFlag) std::cout << "rank is: " << rank << std::endl;
         if (coutFlag) printAs2D(block_size, block_size, M3);
         if (coutFlag) std::cout << std::endl;
 
         simplerGEMM(block_size, block_size, block_size, M1, M2, M3);
 
+        if (coutFlag) MPI_Barrier(MPI_COMM_WORLD);
         if (coutFlag) std::cout << "rank is: " << rank << std::endl;
         if (coutFlag) printAs2D(block_size, block_size, M3);
         if (coutFlag) std::cout << std::endl;
@@ -266,6 +268,7 @@ void testMPIGemm(int rank, int numtasks) {
     MPIGemm(rank, numtasks, grid_comm, dims, periods, coords, blockSize, M1, M2, M3, q, RES);
     finish = std::chrono::steady_clock::now();
     time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count();
+    // double MPI_Wtime() ...
 
     std::cout << "Time is: " << time << std::endl;
 
