@@ -4,6 +4,8 @@
 #include <random>
 #include <iomanip>
 #include <chrono>
+#include <immintrin.h>
+#include <mpi.h>
 
 const int setwConst = 6;
 
@@ -63,7 +65,7 @@ void printAs1D(int m, int n, double* M) {
     std::cout << std::endl;
 }
 
-int main() {
+void testGemm() {
     int N = 2000;
     int n = 3;
     int m = 4;
@@ -76,22 +78,39 @@ int main() {
     double* M3 = new double[m * n] {};
     std::chrono::steady_clock::time_point start, finish;
     uint64_t time;
-    
+
     simpleGenerate(m, k, M1);
     simpleGenerate(k, n, M2);
-//    simpleGenerate(m, n, M3);
+    //    simpleGenerate(m, n, M3);
 
-//    printAs2D(m, k, M1); std::cout << std::endl; printAs1D(m, k, M1); std::cout << std::endl << std::endl;
-//    printAs2D(k, n, M2); std::cout << std::endl; printAs1D(k, n, M2); std::cout << std::endl << std::endl;
-//    printAs2D(m, n, M3); std::cout << std::endl; printAs1D(m, n, M3); std::cout << std::endl << std::endl;
+    //    printAs2D(m, k, M1); std::cout << std::endl; printAs1D(m, k, M1); std::cout << std::endl << std::endl;
+    //    printAs2D(k, n, M2); std::cout << std::endl; printAs1D(k, n, M2); std::cout << std::endl << std::endl;
+    //    printAs2D(m, n, M3); std::cout << std::endl; printAs1D(m, n, M3); std::cout << std::endl << std::endl;
 
     start = std::chrono::steady_clock::now();
     simplerGEMM(m, n, k, M1, M2, M3);
-//    simpleGEMM(m, n, k, M1, M2, M3, alpha, beta);
+    //    simpleGEMM(m, n, k, M1, M2, M3, alpha, beta);
     finish = std::chrono::steady_clock::now();
     time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count();
 
-//    printAs2D(m, n, M3); std::cout << std::endl; printAs1D(m, n, M3); std::cout << std::endl << std::endl;
+    //    printAs2D(m, n, M3); std::cout << std::endl; printAs1D(m, n, M3); std::cout << std::endl << std::endl;
     std::cout << "Time is: " << time << std::endl;
+}
+
+void testMPI(int* argc, char **argv) {
+    int numtasks, rank;
+    MPI_Init(argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
+
+//    printf("Hello from process = %d, total number of processes: %d\n", rank, numtasks);
+
+    MPI_Finalize();
+}
+
+int main(int* argc, char **argv) {
+    
+    testMPI(argc, argv);
+
 	return 0;
 }
