@@ -66,6 +66,14 @@ void printAs1D(int m, int n, double* M) {
     std::cout << std::endl;
 }
 
+double getErr(int m, int n, double* example, double* result) {
+    double err = 0.0;
+    for (size_t i = 0; i < m * n; ++i) {
+        err = std::max(err, std::abs(example[i] - result[i]));
+    }
+    return err;
+}
+
 void testSimpleGemm() {
     int N = 2000;
     int n = 3;
@@ -130,6 +138,28 @@ void gather_result_blocks(double* block, double* RES,
     delete[] gathered;
 }
 
+void distribute_matrix(double* full, double* local, int N, int q, int block_size) {
+    double* blocks = new double[N * N];
+
+    for (int proc = 0; proc < q * q; ++proc) {
+        int proc_row = proc / q;
+        int proc_col = proc % q;
+
+        for (int i = 0; i < block_size; ++i)
+            for (int j = 0; j < block_size; ++j) {
+                int global_i = proc_row * block_size + i;
+                int global_j = proc_col * block_size + j;
+                blocks[proc * block_size * block_size + i * block_size + j] =
+                    full[global_i * N + global_j];
+            }
+    }
+
+    MPI_Scatter(blocks, block_size * block_size, MPI_DOUBLE,
+        local, block_size * block_size, MPI_DOUBLE,
+        0, MPI_COMM_WORLD);
+
+    delete[] blocks;
+}
 
 void MPIGemm(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int periods[2], int coords[2], int block_size, double* M1, double* M2, double* M3, int q, double *RES) {
     int left, right, up, down;
@@ -160,7 +190,7 @@ void MPIGemm(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int period
 
 void testMPIGemm(int rank, int numtasks) {
     int q = sqrt(numtasks);
-    int blockSize = 500;
+    int blockSize = 1;
     int N = q * blockSize;
     int n = 3;
     int m = 4;
@@ -170,7 +200,7 @@ void testMPIGemm(int rank, int numtasks) {
     double beta = -1.0;
     std::chrono::steady_clock::time_point start, finish;
     uint64_t time;
-    double* M1, * M2, * M3, * RES = nullptr;
+    double* M1, * M2, * M3, * RES = nullptr, * A = nullptr, * B = nullptr, * C = nullptr;
 
     if (q * q != numtasks) {
         if (rank == 0)
@@ -188,23 +218,58 @@ void testMPIGemm(int rank, int numtasks) {
     M1 = new double[blockSize * blockSize] {};
     M2 = new double[blockSize * blockSize] {};
     M3 = new double[blockSize * blockSize] {};
-    if (rank == 0) RES = new double[N * N] {};
-
-    simpleGenerate(blockSize, blockSize, M1);
-    simpleGenerate(blockSize, blockSize, M2);
+    if (rank == 0) {
+        RES = new double[N * N] {};
+        A = new double[N * N];
+        B = new double[N * N];
+        simpleGenerate(N, N, A);
+        simpleGenerate(N, N, B);
+        distribute_matrix(A, M1, N, q, blockSize);
+        distribute_matrix(B, M2, N, q, blockSize);
+    }
+    else {
+        MPI_Scatter(nullptr, blockSize * blockSize, MPI_DOUBLE,
+            M1, blockSize * blockSize, MPI_DOUBLE,
+            0, MPI_COMM_WORLD);
+        MPI_Scatter(nullptr, blockSize * blockSize, MPI_DOUBLE,
+            M2, blockSize * blockSize, MPI_DOUBLE,
+            0, MPI_COMM_WORLD);
+    }
 
     // Distribute matrices to 2D mesh ...
-
     start = std::chrono::steady_clock::now();
     MPIGemm(rank, numtasks, grid_comm, dims, periods, coords, blockSize, M1, M2, M3, q, RES);
     finish = std::chrono::steady_clock::now();
     time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count();
 
     std::cout << "Time is: " << time << std::endl;
+
     delete[] M1;
     delete[] M2;
     delete[] M3;
+
+    if (rank == 0) {
+        printAs2D(N, N, A);
+        std::cout << std::endl;
+        printAs2D(N, N, B);
+        std::cout << std::endl;
+        C = new double[N * N] {};
+
+        start = std::chrono::steady_clock::now();
+        simplerGEMM(N, N, N, A, B, C);
+        finish = std::chrono::steady_clock::now();
+        time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count();
+        std::cout << std::endl << "Time for naive implementation: " << time << " , error is: " << getErr(N, N, C, RES) << std::endl;
+        printAs2D(N, N, C);
+        std::cout << std::endl;
+        printAs2D(N, N, RES);
+        std::cout << std::endl;
+    }
+
     delete[] RES;
+    delete[] A;
+    delete[] B;
+    delete[] C;
 }
 
 void testMPI(int rank, int numtasks) {
