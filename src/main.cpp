@@ -11,7 +11,7 @@
 #include <cstdlib>
 
 const int setwConst = 10;
-bool coutFlag = true;
+bool coutFlag = false;
 
 void simpleGEMM(int m, int n, int k, double* A, double* B, double* C, double alpha, double beta) { // colomn-major
 	int i, j, p;
@@ -45,8 +45,8 @@ void determinedGenerate(int m, int n, double* M) {
 }
 
 void simpleGenerate(int m, int n, double* M) {
-    determinedGenerate(m, n, M);
-    return;
+//    determinedGenerate(m, n, M);
+//    return;
     std::random_device r;
     std::default_random_engine e(r());
     std::uniform_real_distribution<double> coef_gen(-1.0, 1.0);
@@ -173,35 +173,56 @@ void distribute_matrix(double* full, double* local, int N, int q, int block_size
 }
 
 void MPIGemm(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int periods[2], int coords[2], int block_size, double* M1, double* M2, double* M3, int q, double *RES) {
+
+    if (rank == 1) {
+        if (coutFlag) std::cout << "rank is: " << rank << std::endl;
+        if (coutFlag) printAs2D(block_size, block_size, M1);
+        if (coutFlag) std::cout << std::endl;
+        if (coutFlag) printAs2D(block_size, block_size, M2);
+        if (coutFlag) std::cout << std::endl;
+    }
+
     int left, right, up, down;
+    
     MPI_Cart_shift(grid_comm, 1, -coords[0], &right, &left);
-    MPI_Sendrecv_replace(M1, block_size * block_size, MPI_DOUBLE,
+    MPI_Sendrecv_replace(M2, block_size * block_size, MPI_DOUBLE,
         left, 0, right, 0, grid_comm, MPI_STATUS_IGNORE);
 
     MPI_Cart_shift(grid_comm, 0, -coords[1], &down, &up);
-    MPI_Sendrecv_replace(M2, block_size * block_size, MPI_DOUBLE,
+    MPI_Sendrecv_replace(M1, block_size * block_size, MPI_DOUBLE,
         up, 0, down, 0, grid_comm, MPI_STATUS_IGNORE);
+
+    if (rank == 1) {
+        if (coutFlag) std::cout << "rank is: " << rank << std::endl;
+        if (coutFlag) printAs2D(block_size, block_size, M1);
+        if (coutFlag) std::cout << std::endl;
+        if (coutFlag) printAs2D(block_size, block_size, M2);
+        if (coutFlag) std::cout << std::endl;
+    }
+
+    MPI_Cart_shift(grid_comm, 1, -1, &right, &left);
+    MPI_Cart_shift(grid_comm, 0, -1, &down, &up);
 
     // Cannon's cycle
     for (int step = 0; step < q; ++step) {
-        if (coutFlag) MPI_Barrier(MPI_COMM_WORLD);
-        if (coutFlag) std::cout << "rank is: " << rank << std::endl;
-        if (coutFlag) printAs2D(block_size, block_size, M3);
-        if (coutFlag) std::cout << std::endl;
+        if (rank == 1) {
+            if (coutFlag) std::cout << "rank is: " << rank << std::endl;
+            if (coutFlag) printAs2D(block_size, block_size, M3);
+            if (coutFlag) std::cout << std::endl;
+        }
 
         simplerGEMM(block_size, block_size, block_size, M1, M2, M3);
 
-        if (coutFlag) MPI_Barrier(MPI_COMM_WORLD);
-        if (coutFlag) std::cout << "rank is: " << rank << std::endl;
-        if (coutFlag) printAs2D(block_size, block_size, M3);
-        if (coutFlag) std::cout << std::endl;
+        if (rank == 1) {
+            if (coutFlag) std::cout << "rank is: " << rank << std::endl;
+            if (coutFlag) printAs2D(block_size, block_size, M3);
+            if (coutFlag) std::cout << std::endl;
+        }
 
-        MPI_Cart_shift(grid_comm, 1, -1, &right, &left);
-        MPI_Sendrecv_replace(M1, block_size * block_size, MPI_DOUBLE,
+        MPI_Sendrecv_replace(M2, block_size * block_size, MPI_DOUBLE,
             left, 0, right, 0, grid_comm, MPI_STATUS_IGNORE);
 
-        MPI_Cart_shift(grid_comm, 0, -1, &down, &up);
-        MPI_Sendrecv_replace(M2, block_size * block_size, MPI_DOUBLE,
+        MPI_Sendrecv_replace(M1, block_size * block_size, MPI_DOUBLE,
             up, 0, down, 0, grid_comm, MPI_STATUS_IGNORE);
     }
 
@@ -211,7 +232,7 @@ void MPIGemm(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int period
 
 void testMPIGemm(int rank, int numtasks) {
     int q = sqrt(numtasks);
-    int blockSize = 2;
+    int blockSize = 200;
     int N = q * blockSize;
     int n = 3;
     int m = 4;
