@@ -9,4 +9,4 @@ include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
 add_executable(${target} ${srcs} ${hdrs})
 target_link_libraries(${target} gtest ${LIBRARY})
-target_link_libraries(my_mpi_target ${MPI_C_LIBRARIES})
+target_link_libraries(${target} ${MPI_C_LIBRARIES})
