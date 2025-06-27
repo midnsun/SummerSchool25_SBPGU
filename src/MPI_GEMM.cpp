@@ -5,22 +5,22 @@
 #include <iomanip>
 #include <random>
 
-const int setwConst = 10;
-bool coutFlag = false;
+//const int setwConst = 10;
+//bool coutFlag = false;
 
-void simpleGEMM(int m, int n, int k, double* A, double* B, double* C, double alpha, double beta) { // colomn-major
-    int i, j, p;
-    for (i = 0; i < m; ++i) {
-        for (j = 0; j < n; ++j) {
-            C[j * m + i] *= beta;
-            for (p = 0; p < k; ++p) {
-                C[j * m + i] += alpha * A[p * m + i] * B[j * k + p];
-            }
-        }
-    }
-}
+//void simpleGEMM(int m, int n, int k, double* A, double* B, double* C, double alpha, double beta) { // colomn-major
+//    int i, j, p;
+//    for (i = 0; i < m; ++i) {
+//        for (j = 0; j < n; ++j) {
+//            C[j * m + i] *= beta;
+//            for (p = 0; p < k; ++p) {
+//                C[j * m + i] += alpha * A[p * m + i] * B[j * k + p];
+//            }
+//        }
+//    }
+//}
 
-void simplerGEMM(int m, int n, int k, double* A, double* B, double* C) { // colomn-major
+void simpleGEMM(int m, int n, int k, double* A, double* B, double* C) { // colomn-major
     int i, j, p;
     for (j = 0; j < n; ++j) {
         for (p = 0; p < k; ++p) {
@@ -31,17 +31,15 @@ void simplerGEMM(int m, int n, int k, double* A, double* B, double* C) { // colo
     }
 }
 
-void determinedGenerate(int m, int n, double* M) {
-    for (size_t i = 0; i < m; ++i) {
-        for (size_t j = 0; j < n; ++j) {
-            M[j * m + i] = j * m + i;
-        }
-    }
-}
+//void determinedGenerate(int m, int n, double* M) {
+//    for (size_t i = 0; i < m; ++i) {
+//        for (size_t j = 0; j < n; ++j) {
+//            M[j * m + i] = j * m + i;
+//        }
+//    }
+//}
 
 void simpleGenerate(int m, int n, double* M) {
-    //    determinedGenerate(m, n, M);
-    //    return;
     std::random_device r;
     std::default_random_engine e(r());
     std::uniform_real_distribution<double> coef_gen(-1.0, 1.0);
@@ -54,23 +52,23 @@ void simpleGenerate(int m, int n, double* M) {
     }
 }
 
-void printAs2D(int m, int n, double* M) {
-    std::cout << std::fixed << std::setprecision(2);
-    for (size_t i = 0; i < m; ++i) {
-        for (size_t j = 0; j < n; ++j) {
-            std::cout << std::setw(setwConst) << M[j * m + i];
-        }
-        std::cout << std::endl;
-    }
-}
-
-void printAs1D(int m, int n, double* M) {
-    std::cout << std::fixed << std::setprecision(2);
-    for (size_t i = 0; i < n * m; ++i) {
-        std::cout << std::setw(setwConst) << M[i];
-    }
-    std::cout << std::endl;
-}
+//void printAs2D(int m, int n, double* M) {
+//    std::cout << std::fixed << std::setprecision(2);
+//    for (size_t i = 0; i < m; ++i) {
+//        for (size_t j = 0; j < n; ++j) {
+//            std::cout << std::setw(setwConst) << M[j * m + i];
+//        }
+//        std::cout << std::endl;
+//    }
+//}
+//
+//void printAs1D(int m, int n, double* M) {
+//    std::cout << std::fixed << std::setprecision(2);
+//    for (size_t i = 0; i < n * m; ++i) {
+//        std::cout << std::setw(setwConst) << M[i];
+//    }
+//    std::cout << std::endl;
+//}
 
 double getErr(int m, int n, double* example, double* result) {
     double err = 0.0;
@@ -78,38 +76,6 @@ double getErr(int m, int n, double* example, double* result) {
         err = std::max(err, std::abs(example[i] - result[i]));
     }
     return err;
-}
-
-void testSimpleGemm() {
-    int N = 2000;
-    int n = 3;
-    int m = 4;
-    int k = 2;
-    n = m = k = N;
-    double alpha = 1.0;
-    double beta = -1.0;
-    double* M1 = new double[m * k] {};
-    double* M2 = new double[k * n] {};
-    double* M3 = new double[m * n] {};
-    std::chrono::steady_clock::time_point start, finish;
-    uint64_t time;
-
-    simpleGenerate(m, k, M1);
-    simpleGenerate(k, n, M2);
-    //    simpleGenerate(m, n, M3);
-
-    //    printAs2D(m, k, M1); std::cout << std::endl; printAs1D(m, k, M1); std::cout << std::endl << std::endl;
-    //    printAs2D(k, n, M2); std::cout << std::endl; printAs1D(k, n, M2); std::cout << std::endl << std::endl;
-    //    printAs2D(m, n, M3); std::cout << std::endl; printAs1D(m, n, M3); std::cout << std::endl << std::endl;
-
-    start = std::chrono::steady_clock::now();
-    simplerGEMM(m, n, k, M1, M2, M3);
-    //    simpleGEMM(m, n, k, M1, M2, M3, alpha, beta);
-    finish = std::chrono::steady_clock::now();
-    time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count();
-
-    //    printAs2D(m, n, M3); std::cout << std::endl; printAs1D(m, n, M3); std::cout << std::endl << std::endl;
-    std::cout << "Time is: " << time << std::endl;
 }
 
 void gather_result_blocks(double* block, double* RES,
@@ -206,7 +172,7 @@ void MPIGemm(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int period
         //            if (coutFlag) std::cout << std::endl;
         //        }
 
-        simplerGEMM(block_size, block_size, block_size, M1, M2, M3);
+        simpleGEMM(block_size, block_size, block_size, M1, M2, M3);
 
         //        if (rank == 1) {
         //            if (coutFlag) std::cout << "rank is: " << rank << std::endl;
@@ -278,11 +244,11 @@ void testMPIGemm(int argc, char** argv) {
             0, MPI_COMM_WORLD);
     }
 
-    if (coutFlag) std::cout << "rank: " << rank << std::endl;
-    if (coutFlag) printAs2D(blockSize, blockSize, M1);
-    if (coutFlag) std::cout << std::endl;
-    if (coutFlag) printAs2D(blockSize, blockSize, M2);
-    if (coutFlag) std::cout << std::endl;
+//    if (coutFlag) std::cout << "rank: " << rank << std::endl;
+//    if (coutFlag) printAs2D(blockSize, blockSize, M1);
+//    if (coutFlag) std::cout << std::endl;
+//    if (coutFlag) printAs2D(blockSize, blockSize, M2);
+//    if (coutFlag) std::cout << std::endl;
 
     // Distribute matrices to 2D mesh ...
     start = std::chrono::steady_clock::now();
@@ -298,21 +264,21 @@ void testMPIGemm(int argc, char** argv) {
     delete[] M3;
 
     if (rank == 0) {
-        if (coutFlag) printAs2D(N, N, A);
-        if (coutFlag) std::cout << std::endl;
-        if (coutFlag) printAs2D(N, N, B);
-        if (coutFlag) std::cout << std::endl;
+//        if (coutFlag) printAs2D(N, N, A);
+//        if (coutFlag) std::cout << std::endl;
+//        if (coutFlag) printAs2D(N, N, B);
+//        if (coutFlag) std::cout << std::endl;
         C = new double[N * N] {};
 
         start = std::chrono::steady_clock::now();
-        simplerGEMM(N, N, N, A, B, C);
+        simpleGEMM(N, N, N, A, B, C);
         finish = std::chrono::steady_clock::now();
         time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count();
         std::cout << std::endl << "Time for naive implementation: " << time << " , error is: " << getErr(N, N, C, RES) << std::endl;
-        if (coutFlag) printAs2D(N, N, C);
-        if (coutFlag) std::cout << std::endl;
-        if (coutFlag) printAs2D(N, N, RES);
-        if (coutFlag) std::cout << std::endl;
+//        if (coutFlag) printAs2D(N, N, C);
+//        if (coutFlag) std::cout << std::endl;
+//        if (coutFlag) printAs2D(N, N, RES);
+//        if (coutFlag) std::cout << std::endl;
     }
 
     delete[] RES;
