@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8...3.13)
 
-set(PROJECT_NAME project)
+set(PROJECT_NAME MPI_GEMM)
 project(${PROJECT_NAME})
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)

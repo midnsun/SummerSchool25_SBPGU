@@ -230,7 +230,12 @@ void MPIGemm(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int period
     gather_result_blocks(M3, RES, q * block_size, q, block_size, grid_comm);
 }
 
-void testMPIGemm(int rank, int numtasks) {
+void testMPIGemm(int argc, char** argv) {
+    int numtasks, rank;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
+
     int q = sqrt(numtasks);
     int blockSize = 200;
     int N = q * blockSize;
@@ -319,6 +324,8 @@ void testMPIGemm(int rank, int numtasks) {
     delete[] A;
     delete[] B;
     delete[] C;
+
+    MPI_Finalize();
 }
 
 void testMPI(int rank, int numtasks) {
@@ -326,14 +333,9 @@ void testMPI(int rank, int numtasks) {
 }
 
 int main(int argc, char **argv) {
-    int numtasks, rank;
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
 
 //    testMPI(rank, numtasks);
-    testMPIGemm(rank, numtasks);
+    testMPIGemm(argc, argv);
 
-    MPI_Finalize();
 	return 0;
 }
