@@ -3,15 +3,15 @@ name: MPI_GEMM
 on: [push]
 
 jobs:
-  windows-build:
-    runs-on: windows-latest
-    steps:
-        - uses: actions/checkout@v2
-        - run: |
-            mkdir build
-            cmake -Bbuild -G "Visual Studio 17 2022"       
-            cmake --build build
-            .\build\bin\test_project.exe
+#  windows-build:
+#    runs-on: windows-latest
+#    steps:
+#        - uses: actions/checkout@v2
+#        - run: |
+#            mkdir build
+#            cmake -Bbuild -G "Visual Studio 17 2022"       
+#            cmake --build build
+#            .\build\bin\test_project.exe
     
   linux-build:
     runs-on: ubuntu-latest
