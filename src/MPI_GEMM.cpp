@@ -133,7 +133,7 @@ void distribute_matrix(double* full, double* local, int N, int q, int block_size
     delete[] blocks;
 }
 
-void MPIGemm(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int periods[2], int coords[2], int block_size, double* M1, double* M2, double* M3, int q, double* RES) {
+void MPIGemm_old(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int periods[2], int coords[2], int block_size, double* M1, double* M2, double* M3, int q, double* RES) {
 
     //    if (rank == 1) {
     //        if (coutFlag) std::cout << "rank is: " << rank << std::endl;
@@ -189,6 +189,13 @@ void MPIGemm(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int period
 
     // Gather
     gather_result_blocks(M3, RES, q * block_size, q, block_size, grid_comm);
+}
+
+void MPI_GEMM(int argc, char** argv, int m, int n, int k, double* A, double* B, double* C) {
+    int numtasks, rank;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
 }
 
 void testMPIGemm(int argc, char** argv) {
