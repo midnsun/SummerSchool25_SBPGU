@@ -234,7 +234,7 @@ void MPI_GEMM_square(int argc, char** argv, int N, double* A, double* B, double*
             0, MPI_COMM_WORLD);
     }
 
-    // 2D Grid preparations
+
     int left, right, up, down;
     MPI_Cart_shift(grid_comm, 1, -coords[0], &right, &left);
     MPI_Sendrecv_replace(M2, blockSize * blockSize, MPI_DOUBLE,
@@ -242,62 +242,49 @@ void MPI_GEMM_square(int argc, char** argv, int N, double* A, double* B, double*
     MPI_Cart_shift(grid_comm, 0, -coords[1], &down, &up);
     MPI_Sendrecv_replace(M1, blockSize * blockSize, MPI_DOUBLE,
         up, 0, down, 0, grid_comm, MPI_STATUS_IGNORE);
+
+    //    if (rank == 1) {
+    //        if (coutFlag) std::cout << "rank is: " << rank << std::endl;
+    //        if (coutFlag) printAs2D(block_size, block_size, M1);
+    //        if (coutFlag) std::cout << std::endl;
+    //        if (coutFlag) printAs2D(block_size, block_size, M2);
+    //        if (coutFlag) std::cout << std::endl;
+    //    }
+
     MPI_Cart_shift(grid_comm, 1, -1, &right, &left);
     MPI_Cart_shift(grid_comm, 0, -1, &down, &up);
 
     // Cannon's cycle
     for (int step = 0; step < q; ++step) {
-        simpleGEMM(blockSize, blockSize, blockSize, M1, M2, M3);
-        MPI_Sendrecv_replace(M2, blockSize * blockSize, MPI_DOUBLE,
+        //        if (rank == 1) {
+        //            if (coutFlag) std::cout << "rank is: " << rank << std::endl;
+        //            if (coutFlag) printAs2D(block_size, block_size, M3);
+        //            if (coutFlag) std::cout << std::endl;
+        //        }
+
+        simpleGEMM(block_size, block_size, block_size, M1, M2, M3);
+
+        //        if (rank == 1) {
+        //            if (coutFlag) std::cout << "rank is: " << rank << std::endl;
+        //            if (coutFlag) printAs2D(block_size, block_size, M3);
+        //            if (coutFlag) std::cout << std::endl;
+        //        }
+
+        MPI_Sendrecv_replace(M2, block_size * block_size, MPI_DOUBLE,
             left, 0, right, 0, grid_comm, MPI_STATUS_IGNORE);
 
-        MPI_Sendrecv_replace(M1, blockSize * blockSize, MPI_DOUBLE,
+        MPI_Sendrecv_replace(M1, block_size * block_size, MPI_DOUBLE,
             up, 0, down, 0, grid_comm, MPI_STATUS_IGNORE);
     }
 
     // Gather
-    gather_result_blocks(M3, C, q * blockSize, q, blockSize, grid_comm);
+    gather_result_blocks(M3, RES, q * block_size, q, block_size, grid_comm);
 
-    // Close MPI, free memory
-    delete[] M1;
-    delete[] M2;
-    delete[] M3;
+    // Close MPI
     MPI_Finalize();
 }
 
 void testMPIGemm(int argc, char** argv) {
-    int N = 2000;
-
-    double* A, * B, * C, * RES = nullptr;
-    A = new double[N * N] {};
-    B = new double[N * N] {};
-    C = new double[N * N] {};
-    simpleGenerate(N, N, A);
-    simpleGenerate(N, N, B);
-
-    std::chrono::steady_clock::time_point start, finish; //
-    uint64_t time; //
-    start = std::chrono::steady_clock::now(); //
-    MPI_GEMM_square(argc, argv, N, A, B, C);
-    finish = std::chrono::steady_clock::now(); //
-    time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count(); //
-    std::cout << "Time is: " << time << std::endl; //
-
-    std::cout << "What?" << std::endl;
-
-    start = std::chrono::steady_clock::now(); //
-    simpleGEMM(N, N, N, A, B, RES);
-    finish = std::chrono::steady_clock::now(); //
-    time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count(); //
-    std::cout << std::endl << "Time for naive implementation: " << time << " , error is: " << getErr(N, N, C, RES) << std::endl; //
-
-    delete[] A;
-    delete[] B;
-    delete[] C;
-    delete[] RES;
-}
-
-void testMPIGemm_old(int argc, char** argv) {
     int numtasks, rank;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -358,7 +345,7 @@ void testMPIGemm_old(int argc, char** argv) {
 
     // Distribute matrices to 2D mesh ...
     start = std::chrono::steady_clock::now();
-    MPIGemm_old(rank, numtasks, grid_comm, dims, periods, coords, blockSize, M1, M2, M3, q, RES);
+    MPIGemm(rank, numtasks, grid_comm, dims, periods, coords, blockSize, M1, M2, M3, q, RES);
     finish = std::chrono::steady_clock::now();
     time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count();
     // double MPI_Wtime() ...

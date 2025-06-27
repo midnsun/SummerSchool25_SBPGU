@@ -19,6 +19,10 @@ void gather_result_blocks(double* block, double* RES,
 
 void distribute_matrix(double* full, double* local, int N, int q, int block_size);
 
-void MPIGemm(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int periods[2], int coords[2], int block_size, double* M1, double* M2, double* M3, int q, double* RES);
+void MPIGemm_old(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int periods[2], int coords[2], int block_size, double* M1, double* M2, double* M3, int q, double* RES);
+
+void MPI_GEMM_square(int argc, char** argv, int N, double* A, double* B, double* C);
+
+void testMPIGemm_old(int argc, char** argv);
 
 void testMPIGemm(int argc, char** argv);

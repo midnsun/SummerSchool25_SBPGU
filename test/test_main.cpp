@@ -11,6 +11,7 @@ int main(int argc, char **argv) {
     for (i = 0; i < argc + 1; i++) {
         if (argv[i] == nullptr) continue;
         // Printing all the Arguments
+        std::cout << i << " ";
         printf("%s | ", argv[i]);
     }
     printf("\n");
