@@ -283,13 +283,11 @@ void testMPIGemm(int argc, char** argv) {
     time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count(); //
     std::cout << "Time is: " << time << std::endl; //
 
-    std::cout << "What?" << std::endl;
-
-    start = std::chrono::steady_clock::now(); //
-    simpleGEMM(N, N, N, A, B, RES);
-    finish = std::chrono::steady_clock::now(); //
-    time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count(); //
-    std::cout << std::endl << "Time for naive implementation: " << time << " , error is: " << getErr(N, N, C, RES) << std::endl; //
+//    start = std::chrono::steady_clock::now(); //
+//    simpleGEMM(N, N, N, A, B, RES);
+//    finish = std::chrono::steady_clock::now(); //
+//    time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count(); //
+//    std::cout << std::endl << "Time for naive implementation: " << time << " , error is: " << getErr(N, N, C, RES) << std::endl; //
 
     delete[] A;
     delete[] B;
