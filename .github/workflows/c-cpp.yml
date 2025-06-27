@@ -48,17 +48,4 @@ jobs:
             mkdir build
             cmake -B build
             cmake --build build
-            .\build\bin\test_project.exe
-
-#    - name: CMake self-tests
-#      run: ctest --test-dir build --output-on-failure
-    
-#  linux-build:
-#    runs-on: ubuntu-latest
-#    steps:
-#        - uses: actions/checkout@v2
-#        - run: |
-#            mkdir build
-#            cmake -Bbuild -G "Unix Makefiles"       
-#            cmake --build build
-#            ./build/bin/test_project
+            .\build\bin\test_MPI_GEMM.exe
