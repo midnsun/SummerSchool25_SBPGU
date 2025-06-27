@@ -191,11 +191,36 @@ void MPIGemm_old(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int pe
     gather_result_blocks(M3, RES, q * block_size, q, block_size, grid_comm);
 }
 
-void MPI_GEMM(int argc, char** argv, int m, int n, int k, double* A, double* B, double* C) {
+void MPI_GEMM_square(int argc, char** argv, int N, double* A, double* B, double* C) {
     int numtasks, rank;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
+
+    double* M1, * M2, * M3;
+    int q = sqrt(numtasks);
+    int blockSize = N / q;
+    if (q * q != numtasks) {
+        if (rank == 0)
+            std::cerr << "Number of processes must be a perfect square\n";
+        if (rank == 0 && q * blockSize != N) 
+            std::cerr << "Number of processes must be matrice's divider\n";
+        MPI_Finalize();
+        return;
+    }
+
+    // Create 2D grid
+    MPI_Comm grid_comm;
+    int dims[2] = { q, q }, periods[2] = { 1, 1 }, coords[2];
+    MPI_Cart_create(MPI_COMM_WORLD, 2, dims, periods, 1, &grid_comm);
+    MPI_Cart_coords(grid_comm, rank, 2, coords);
+
+    M1 = new double[blockSize * blockSize] {};
+    M2 = new double[blockSize * blockSize] {};
+    M3 = new double[blockSize * blockSize] {};
+
+
+    MPI_Finalize();
 }
 
 void testMPIGemm(int argc, char** argv) {
