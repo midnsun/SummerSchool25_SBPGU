@@ -8,6 +8,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     strategy:
+      matrix:
         mpi: [ 'mpich', 'openmpi', 'intelmpi']
     steps:
       - uses: actions/checkout@v4
