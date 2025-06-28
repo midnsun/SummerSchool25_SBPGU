@@ -4,6 +4,7 @@
 #include <chrono>
 #include <iomanip>
 #include <random>
+#include <stdexcept>
 
 //const int setwConst = 10;
 //bool coutFlag = false;
@@ -191,26 +192,19 @@ void MPIGemm_old(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int pe
     gather_result_blocks(M3, RES, q * block_size, q, block_size, grid_comm);
 }
 
-void MPI_GEMM_square(int argc, char** argv, int N, double* A, double* B, double* C) {
-    // MPI initialization
-    int numtasks, rank;
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
-
+void MPI_GEMM_square(int rank, int numtasks, int N, double* A, double* B, double* C) {
     // Getting sizes
     double* M1, * M2, * M3;
     int q = sqrt(numtasks);
     int blockSize = N / q;
     if (q * q != numtasks) {
         if (rank == 0)
-            std::cerr << "Number of processes must be a perfect square\n";
+            throw std::runtime_error("Number of processes must be a perfect square");
         if (rank == 0 && q * blockSize != N) 
-            std::cerr << "Number of processes must be matrice's divider\n";
-        MPI_Finalize();
+            throw std::runtime_error("Number of processes must be matrice's divider");
         return;
     }
-
+    
     // Create 2D grid
     MPI_Comm grid_comm;
     int dims[2] = { q, q }, periods[2] = { 1, 1 }, coords[2];
@@ -224,6 +218,7 @@ void MPI_GEMM_square(int argc, char** argv, int N, double* A, double* B, double*
     if (rank == 0) {
         distribute_matrix(A, M1, N, q, blockSize);
         distribute_matrix(B, M2, N, q, blockSize);
+        MPI_Barrier(MPI_COMM_WORLD);
     }
     else {
         MPI_Scatter(nullptr, blockSize * blockSize, MPI_DOUBLE,
@@ -232,6 +227,7 @@ void MPI_GEMM_square(int argc, char** argv, int N, double* A, double* B, double*
         MPI_Scatter(nullptr, blockSize * blockSize, MPI_DOUBLE,
             M2, blockSize * blockSize, MPI_DOUBLE,
             0, MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
     }
 
     // 2D Grid preparations
@@ -258,36 +254,48 @@ void MPI_GEMM_square(int argc, char** argv, int N, double* A, double* B, double*
     // Gather
     gather_result_blocks(M3, C, q * blockSize, q, blockSize, grid_comm);
 
-    // Close MPI, free memory
+    // Free memory
     delete[] M1;
     delete[] M2;
     delete[] M3;
-    MPI_Finalize();
 }
 
-void testMPIGemm(int argc, char** argv) {
+void testMPIGemm(int rank, int numtasks) {
     int N = 2000;
 
-    double* A, * B, * C, * RES = nullptr;
-    A = new double[N * N] {};
-    B = new double[N * N] {};
-    C = new double[N * N] {};
-    simpleGenerate(N, N, A);
-    simpleGenerate(N, N, B);
+    double* A = nullptr, * B = nullptr, * C = nullptr, * RES = nullptr;
+    if (rank == 0) {
+        A = new double[N * N] {};
+        B = new double[N * N] {};
+        C = new double[N * N] {};
+        simpleGenerate(N, N, A);
+        simpleGenerate(N, N, B);
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+    else {
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
 
     std::chrono::steady_clock::time_point start, finish; //
     uint64_t time; //
     start = std::chrono::steady_clock::now(); //
-    MPI_GEMM_square(argc, argv, N, A, B, C);
+    MPI_GEMM_square(rank, numtasks, N, A, B, C);
     finish = std::chrono::steady_clock::now(); //
     time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count(); //
     std::cout << "Time is: " << time << std::endl; //
 
-//    start = std::chrono::steady_clock::now(); //
-//    simpleGEMM(N, N, N, A, B, RES);
-//    finish = std::chrono::steady_clock::now(); //
-//    time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count(); //
-//    std::cout << std::endl << "Time for naive implementation: " << time << " , error is: " << getErr(N, N, C, RES) << std::endl; //
+    if (rank == 0) {
+        RES = new double[N * N] {};
+        start = std::chrono::steady_clock::now(); //
+        simpleGEMM(N, N, N, A, B, RES);
+        finish = std::chrono::steady_clock::now(); //
+        time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count(); //
+        std::cout << std::endl << "Time for naive implementation: " << time << " , error is: " << getErr(N, N, C, RES) << std::endl; //
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+    else {
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
 
     delete[] A;
     delete[] B;

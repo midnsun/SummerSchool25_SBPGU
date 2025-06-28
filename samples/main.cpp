@@ -9,9 +9,12 @@ void testMPI(int rank, int numtasks) {
 }
 
 int main(int argc, char **argv) {
-
-//    testMPI(rank, numtasks);
-    testMPIGemm(argc, argv);
-
+    int rank, numtasks;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
+    testMPIGemm(rank, numtasks);
+//    testMPIGemm_old(argc, argv);
+    MPI_Finalize();
 	return 0;
 }
