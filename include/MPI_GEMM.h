@@ -4,6 +4,8 @@
 
 void simpleGEMM(int m, int n, int k, double* A, double* B, double* C);
 
+void simpleSquareGEMM(int N, double* A, double* B, double* C);
+
 //void determinedGenerate(int m, int n, double* M);
 
 void simpleGenerate(int m, int n, double* M);

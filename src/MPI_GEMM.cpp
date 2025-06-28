@@ -192,6 +192,19 @@ void MPIGemm_old(int rank, int numtasks, MPI_Comm grid_comm, int dims[2], int pe
     gather_result_blocks(M3, RES, q * block_size, q, block_size, grid_comm);
 }
 
+void simpleSquareGEMM(int N, double* A, double* B, double* C) {
+    for (size_t i = 0; i < N; ++i) {
+        double* Btmp = &B[i * N];
+        double* Ctmp = &C[i * N];
+        for (size_t k = 0; k < N; ++k) {
+            double tmp = Btmp[k];
+            double* Atmp = &A[k * N];
+            for (size_t j = 0; j < N; ++j)
+                Ctmp[j] += tmp * Atmp[j];
+        }
+    }
+}
+
 void MPI_GEMM_square(int rank, int numtasks, int N, double* A, double* B, double* C) {
     // Getting sizes
     double* M1, * M2, * M3;
@@ -243,7 +256,8 @@ void MPI_GEMM_square(int rank, int numtasks, int N, double* A, double* B, double
 
     // Cannon's cycle
     for (int step = 0; step < q; ++step) {
-        simpleGEMM(blockSize, blockSize, blockSize, M1, M2, M3);
+//        simpleGEMM(blockSize, blockSize, blockSize, M1, M2, M3);
+        simpleSquareGEMM(blockSize, M1, M2, M3);
         MPI_Sendrecv_replace(M2, blockSize * blockSize, MPI_DOUBLE,
             left, 0, right, 0, grid_comm, MPI_STATUS_IGNORE);
 
@@ -287,7 +301,8 @@ void testMPIGemm(int rank, int numtasks) {
     if (rank == 0) {
         RES = new double[N * N] {};
         start = std::chrono::steady_clock::now(); //
-        simpleGEMM(N, N, N, A, B, RES);
+//        simpleGEMM(N, N, N, A, B, RES);
+        simpleSquareGEMM(N, A, B, RES);
         finish = std::chrono::steady_clock::now(); //
         time = std::chrono::duration_cast<std::chrono::milliseconds> (finish - start).count(); //
         std::cout << std::endl << "Time for naive implementation: " << time << " , error is: " << getErr(N, N, C, RES) << std::endl; //
