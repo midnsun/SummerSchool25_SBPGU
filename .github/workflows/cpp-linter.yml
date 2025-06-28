@@ -1,0 +1,46 @@
+name: C/C++ Linter
+
+on:
+  push:
+    branches: [ main, master, litvyakov_branch ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cpp-linter/cpp-linter-action@v2
+        id: linter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          style: file
+          tidy: true 
+          source: .
+          extensions: cpp,h,cc,cxx
+          thread-comments: ${{ github.event_name == 'pull_request' && 'update' }}
+          clang-format-version: 17  
+
+      - name: Display Linter Results
+        if: always()
+        run: |
+          echo "=== Linter Summary ==="
+          echo "Total checks failed: ${{ steps.linter.outputs.checks-failed }}"
+          echo "Files checked: ${{ steps.linter.outputs.checked-files }}"
+          
+          echo "=== Detailed Report ==="
+          if [ -f "${{ github.workspace }}/cpp-linter.log" ]; then
+            cat ${{ github.workspace }}/cpp-linter.log
+          else
+            echo "No linting issues found"
+          fi
+
+      - name: Fail if errors
+        if: ${{ steps.linter.outputs.checks-failed != 0 }}
+        run: |
+          if [ "${{ steps.linter.outputs.checks-failed }}" -gt 0 ]; then
+            exit 1
+          fi
