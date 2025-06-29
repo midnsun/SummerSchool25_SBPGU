@@ -48,4 +48,4 @@ jobs:
             mkdir build
             cmake -B build
             cmake --build build
-            mpiexec -n 16 .\build\bin\test_MPI_GEMM.exe
+            mpiexec -n 4 .\build\bin\test_MPI_GEMM.exe
