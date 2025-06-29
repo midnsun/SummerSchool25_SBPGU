@@ -1,4 +1,5 @@
 #include <gtest.h>
+#include <cmath>
 #include "MPI_GEMM.h"
 
 TEST(MPI_GEMM, can_simple_generate) {
@@ -44,7 +45,7 @@ TEST(MPI_GEMM, can_distribute_matrix) { // supposed 4 tasks
         MPI_Barrier(MPI_COMM_WORLD);
     }
     double* B = new double[M * N / numtasks] {};
-    ASSERT_NO_THROW(distribute_martix(rank, M, N, sqrt(numtasks), A, B));
+    ASSERT_NO_THROW(distribute_martix(rank, M, N, std::sqrt(numtasks), A, B));
 
     delete[] A;
     delete[] B;
@@ -65,7 +66,7 @@ TEST(MPI_GEMM, distribute_matrix_is_correct) { // supposed 4 tasks
     else {
         MPI_Barrier(MPI_COMM_WORLD);
     }
-    int q = sqrt(numtasks);
+    int q = std::sqrt(numtasks);
     double* B = new double[M * N / numtasks] {};
     distribute_martix(rank, M, N, q, A, B);
 
@@ -121,7 +122,7 @@ TEST(MPI_GEMM, can_gather_matrix) { // 4 tasks
         MPI_Barrier(MPI_COMM_WORLD);
     }
     double* B = new double[M * N / numtasks] {};
-    ASSERT_NO_THROW(gather_blocks(M, N, sqrt(numtasks), B, A, MPI_COMM_WORLD));
+    ASSERT_NO_THROW(gather_blocks(M, N, std::sqrt(numtasks), B, A, MPI_COMM_WORLD));
 }
 
 TEST(MPI_GEMM, gather_matrix_is_correct) { // 4 tasks
@@ -171,7 +172,7 @@ TEST(MPI_GEMM, gather_matrix_is_correct) { // 4 tasks
         B[4] = 22.0;
         B[5] = 23.0;
     }
-    gather_blocks(M, N, sqrt(numtasks), B, A, MPI_COMM_WORLD);
+    gather_blocks(M, N, std::sqrt(numtasks), B, A, MPI_COMM_WORLD);
 
     if (rank == 0) for (size_t i = 0; i < M * N; ++i) EXPECT_EQ(i, A[i]);
 
