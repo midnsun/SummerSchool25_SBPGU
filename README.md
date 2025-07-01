@@ -5,7 +5,7 @@ Completed by a 2nd year student of UNN, ITMM, Maksim Zagryadskov
 
 ## How to build this project:
 
-**On windows, with Visual Studio 17 2022**
+**On windows, with Visual Studio 17 2022 and CMake**
 1. Install and setup [MS-MPI](https://docs.microsoft.com/en-us/message-passing-interface/microsoft-mpi-release-notes) for Visual Studio
 2. CLone this repository with `git clone https://github.com/midnsun/SummerSchool25_SBPGU`
 3. Enter the directory with this project and run commands below:
