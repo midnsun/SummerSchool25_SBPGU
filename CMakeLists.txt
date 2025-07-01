@@ -8,6 +8,7 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
+find_package(MPI)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin)
@@ -18,6 +19,7 @@ set(TESTS   "test_${PROJECT_NAME}")
 set(INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 include_directories("${INCLUDE}" gtest)
+include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
 # BUILD
 add_subdirectory(src)
