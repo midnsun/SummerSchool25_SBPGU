@@ -14,7 +14,7 @@ Completed by a 2nd year student of UNN, ITMM, Maksim Zagryadskov
     cmake -B build
     cmake --build build
     ```
-To run tests, type `mpiexec -n 4 .\build\bin\test_MPI_GEMM.exe`
+To run tests, type `mpiexec -n 4 .\build\bin\test_MPI_GEMM.exe`  
 To run sample, type `mpiexec -n 4 .\build\bin\sample.exe`
 
 
